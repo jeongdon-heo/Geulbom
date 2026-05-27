@@ -28,7 +28,8 @@
       "PowerShell(Start-Process \"http://localhost:3000/\")",
       "Bash(echo \"EXIT: $?\")",
       "Bash(npx kill-port *)",
-      "Bash(git --version)"
+      "Bash(git --version)",
+      "Bash(echo \"=== prisma generate exit: $? ===\")"
     ]
   }
 }
