@@ -1,0 +1,34 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm install *)",
+      "PowerShell(npm list *)",
+      "PowerShell(npx prisma generate 2>&1 | Select-Object -Last 20)",
+      "PowerShell(npx prisma generate 2>&1 | Select-Object -Last 15)",
+      "PowerShell(npx tsc --noEmit 2>&1 | Select-Object -Last 60)",
+      "PowerShell($out = npx next build 2>&1; if \\($LASTEXITCODE -eq 0\\) { 'BUILD OK'; \\($out | Select-String 'Route|First Load'\\) | Select-Object -Last 30 } else { $out | Select-Object -Last 60 })",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(ls .env*)",
+      "Bash(ls node_modules/.prisma)",
+      "Bash(ls node_modules/@prisma/client/package.json)",
+      "PowerShell($bytes = New-Object byte[] 32; [System.Security.Cryptography.RandomNumberGenerator]::Create\\(\\).GetBytes\\($bytes\\); [Convert]::ToBase64String\\($bytes\\))",
+      "Bash(npx prisma *)",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(curl -sS -o NUL -w \"GET / -> %{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -sS -o NUL -w \"GET /login -> %{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -sS -o NUL -w \"GET /api/auth/providers -> %{http_code}\\\\n\" http://localhost:3000/api/auth/providers)",
+      "Bash(node *)",
+      "Bash(npx dotenv *)",
+      "PowerShell(Get-NetTCPConnection *)",
+      "Bash(npx tsx *)",
+      "Bash(xargs grep -l \"feedback\\\\|approval\\\\|APPROVED\")",
+      "Bash(curl *)",
+      "PowerShell(Start-Process \"http://localhost:3000/\")",
+      "Bash(echo \"EXIT: $?\")",
+      "Bash(npx kill-port *)",
+      "Bash(git --version)"
+    ]
+  }
+}

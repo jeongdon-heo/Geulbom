@@ -1,0 +1,28 @@
+{
+  "name": "글봄 (GeulBom)",
+  "short_name": "글봄",
+  "description": "초등학생 글쓰기를 AI로 분석하고, 교사가 검토·승인하는 따뜻한 피드백 플랫폼",
+  "lang": "ko",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fafaf6",
+  "theme_color": "#1D9E75",
+  "categories": ["education"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

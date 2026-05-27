@@ -1,0 +1,371 @@
+// ============================================================
+// 글봄 (GeulBom) — DB 스키마
+// 글쓰기 AI 분석 · 피드백 · 성장 추적 교육 웹앱
+// Stack: Supabase (PostgreSQL) + Prisma
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Supabase pooled URL은 prepared statements를 지원하지 않으므로
+  // 마이그레이션/introspection은 직접 연결(DIRECT_URL)을 사용합니다.
+  directUrl = env("DIRECT_URL")
+}
+
+// ────────────────────────────────────────
+// 1. 인증 · 사용자
+// ────────────────────────────────────────
+
+/// 교사 초대 코드
+model InviteCode {
+  id        String    @id @default(uuid())
+  code      String    @unique @db.VarChar(8)
+  isActive  Boolean   @default(true) @map("is_active")
+  expiresAt DateTime  @map("expires_at")
+  usedBy    String?   @map("used_by")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  teacher Teacher? @relation(fields: [usedBy], references: [id])
+
+  @@map("invite_codes")
+}
+
+/// 교사 계정
+model Teacher {
+  id        String   @id @default(uuid())
+  email     String   @unique @db.VarChar(255)
+  password  String   @db.VarChar(255)
+  name      String   @db.VarChar(50)
+  school    String?  @db.VarChar(100)
+  role      String   @default("teacher") @db.VarChar(20) // "admin" | "teacher"
+  createdAt DateTime @default(now()) @map("created_at")
+
+  classes        Class[]
+  inviteCodes    InviteCode[]
+  rubricTemplates RubricTemplate[]
+
+  @@map("teachers")
+}
+
+// ────────────────────────────────────────
+// 2. 학급 · 학생
+// ────────────────────────────────────────
+
+/// 학급
+model Class {
+  id        String   @id @default(uuid())
+  teacherId String   @map("teacher_id")
+  name      String   @db.VarChar(50) // "4학년 2반"
+  year      Int                       // 2026
+  classCode String   @unique @map("class_code") @db.VarChar(10) // "GB-4201" 학생 접속용
+  createdAt DateTime @default(now()) @map("created_at")
+
+  teacher        Teacher          @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  students       Student[]
+  assignments    Assignment[]
+  yearendReports YearendReport[]
+
+  // 한 교사, 한 해에 하나의 학급
+  @@unique([teacherId, year])
+  @@map("classes")
+}
+
+/// 학생
+model Student {
+  id        String   @id @default(uuid())
+  classId   String   @map("class_id")
+  number    Int                       // 출석번호
+  name      String   @db.VarChar(50)
+  pin       String?  @db.VarChar(255) // 학생 접속용 PIN의 bcrypt 해시 (선택). 평문 PIN은 4~10자.
+  createdAt DateTime @default(now()) @map("created_at")
+
+  class          Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  submissions    Submission[]
+  yearendReports YearendReport[]
+
+  @@unique([classId, number])
+  @@map("students")
+}
+
+// ────────────────────────────────────────
+// 3. 루브릭 (평가 기준)
+// ────────────────────────────────────────
+
+/// 루브릭 템플릿 — 재사용 가능한 평가 기준 세트
+model RubricTemplate {
+  id         String   @id @default(uuid())
+  teacherId  String   @map("teacher_id")
+  name       String   @db.VarChar(100) // "일기 기본형", "독후감형"
+  totalScore Int      @default(100) @map("total_score")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  // areas: JSON 배열
+  // [
+  //   { "key": "content",    "name": "내용",      "maxScore": 20, "description": "주제 관련성, 내용의 풍부함" },
+  //   { "key": "structure",  "name": "구성",      "maxScore": 20, "description": "글의 흐름, 문단 구분" },
+  //   { "key": "expression", "name": "표현",      "maxScore": 20, "description": "어휘 다양성, 비유, 묘사" },
+  //   { "key": "grammar",    "name": "맞춤법·문법", "maxScore": 20, "description": "맞춤법, 띄어쓰기, 문법" },
+  //   { "key": "volume",     "name": "분량",      "maxScore": 20, "description": "최소 글자 수 충족, 적절한 양" }
+  // ]
+  areas Json @db.JsonB
+
+  // scoringGuide: 점수 구간별 기준 (AI 프롬프트에 포함)
+  // {
+  //   "content":    { "high": "18~20: 주제를 깊이 있게 ...", "mid": "13~17: ...", "low": "~12: ..." },
+  //   "structure":  { ... },
+  //   ...
+  // }
+  scoringGuide Json? @map("scoring_guide") @db.JsonB
+
+  teacher     Teacher      @relation(fields: [teacherId], references: [id])
+  assignments Assignment[]
+
+  @@map("rubric_templates")
+}
+
+// ────────────────────────────────────────
+// 4. 과제
+// ────────────────────────────────────────
+
+/// 과제 유형
+enum AssignmentType {
+  REGULAR   // 정기 (주간 일기, 매일 한 줄 쓰기 등)
+  IRREGULAR // 비정기 (독후감, 현장체험 소감문 등)
+}
+
+/// 반복 주기
+enum Frequency {
+  DAILY    // 매일
+  WEEKLY   // 매주
+  BIWEEKLY // 격주
+  MONTHLY  // 매월
+}
+
+/// 과제
+model Assignment {
+  id               String         @id @default(uuid())
+  classId          String         @map("class_id")
+  rubricTemplateId String         @map("rubric_template_id")
+  title            String         @db.VarChar(200) // "주간 일기", "현장체험학습 소감문"
+  description      String?        @db.Text         // 안내문, 주제 설명
+  type             AssignmentType                   // REGULAR | IRREGULAR
+  writingType      String         @db.VarChar(30)  // "일기" | "독후감" | "소감문" | "설명문" | "논설문" | "편지" | "기타"
+  minChars         Int?           @map("min_chars")         // 최소 글자 수
+  recommendedChars Int?           @map("recommended_chars") // 권장 글자 수
+
+  // ── 정기 과제 전용 필드 ──
+  frequency   Frequency? // DAILY, WEEKLY, BIWEEKLY, MONTHLY
+  dayOfWeek   Int?       @map("day_of_week") // 0=일 ~ 6=토 (WEEKLY/BIWEEKLY용)
+  startDate   DateTime?  @map("start_date")
+  endDate     DateTime?  @map("end_date")
+
+  // ── 비정기 과제 전용 필드 ──
+  deadline DateTime? // 단일 마감일
+
+  // ── AI 설정 ──
+  // 피드백을 자동 공개할지, 교사 승인 후 공개할지
+  autoApprove Boolean @default(false) @map("auto_approve")
+  // 학생에게 점수를 보여줄지
+  showScoreToStudent Boolean @default(true) @map("show_score_to_student")
+  // AI 피드백 톤 커스터마이징 (선택)
+  aiPromptNote String? @map("ai_prompt_note") @db.Text // "칭찬을 많이 해줘", "구체적 예시를 들어줘" 등
+
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
+  rubricTemplate RubricTemplate @relation(fields: [rubricTemplateId], references: [id])
+  rounds         AssignmentRound[]
+
+  @@map("assignments")
+}
+
+/// 과제 회차 — 정기 과제는 자동 생성, 비정기는 1회
+model AssignmentRound {
+  id           String   @id @default(uuid())
+  assignmentId String   @map("assignment_id")
+  roundNumber  Int      @map("round_number") // 1, 2, 3, ...
+  title        String?  @db.VarChar(200)     // "주간 일기 #12", null이면 자동 생성
+  deadline     DateTime                       // 이 회차의 마감일
+  isOpen       Boolean  @default(true) @map("is_open") // 제출 가능 여부
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  assignment  Assignment   @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  submissions Submission[]
+
+  @@unique([assignmentId, roundNumber])
+  @@map("assignment_rounds")
+}
+
+// ────────────────────────────────────────
+// 5. 제출
+// ────────────────────────────────────────
+
+/// 제출 입력 방식
+enum InputMethod {
+  TYPED       // 학생 직접 타이핑
+  STUDENT_OCR // 학생이 촬영 → OCR
+  TEACHER_OCR // 교사가 대리 촬영 → OCR
+}
+
+/// 제출 상태
+enum SubmissionStatus {
+  DRAFT     // 임시 저장
+  SUBMITTED // 제출 완료
+}
+
+/// 학생의 글 제출
+model Submission {
+  id               String           @id @default(uuid())
+  studentId        String           @map("student_id")
+  assignmentRoundId String          @map("assignment_round_id")
+  text             String           @db.Text          // 최종 텍스트
+  charCount        Int              @map("char_count") // 글자 수
+  inputMethod      InputMethod      @map("input_method")
+  status           SubmissionStatus @default(DRAFT)
+  submittedAt      DateTime?        @map("submitted_at")
+  createdAt        DateTime         @default(now()) @map("created_at")
+  updatedAt        DateTime         @updatedAt @map("updated_at")
+
+  student         Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignmentRound AssignmentRound @relation(fields: [assignmentRoundId], references: [id], onDelete: Cascade)
+  ocrRecord       OcrRecord?
+  feedback        Feedback?
+
+  @@unique([studentId, assignmentRoundId])
+  @@map("submissions")
+}
+
+// ────────────────────────────────────────
+// 6. OCR 기록
+// ────────────────────────────────────────
+
+/// OCR 인식 기록
+model OcrRecord {
+  id           String   @id @default(uuid())
+  submissionId String   @unique @map("submission_id")
+  imageUrl     String   @map("image_url") @db.Text  // Supabase Storage URL
+  ocrRawText   String   @map("ocr_raw_text") @db.Text // AI가 인식한 원본 텍스트
+  editedText   String   @map("edited_text") @db.Text   // 수정된 최종 텍스트
+  confidence   Float                                    // 전체 인식 확신도 (0~1)
+  aiProvider   String   @map("ai_provider") @db.VarChar(10) // "gemini" | "claude"
+
+  // segments: 구간별 인식 결과
+  // [{ "text": "찍었다", "confidence": 0.42 }, ...]
+  segments Json @db.JsonB
+
+  // corrections: 수정 이력
+  // [{ "before": "씩었다", "after": "찍었다", "editedBy": "student" | "teacher" }]
+  corrections Json @default("[]") @db.JsonB
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@map("ocr_records")
+}
+
+// ────────────────────────────────────────
+// 7. AI 피드백
+// ────────────────────────────────────────
+
+/// 피드백 승인 상태
+enum ApprovalStatus {
+  PENDING  // AI 생성 완료, 교사 검토 대기
+  APPROVED // 교사 승인 → 학생에게 공개
+}
+
+/// AI 피드백
+model Feedback {
+  id           String   @id @default(uuid())
+  submissionId String   @unique @map("submission_id")
+  aiProvider   String   @map("ai_provider") @db.VarChar(10) // "gemini" | "claude"
+
+  // ── 점수 (영역별) ──
+  // { "content": 16, "structure": 12, "expression": 11, "grammar": 17, "volume": 18 }
+  scores     Json @db.JsonB
+  totalScore Int  @map("total_score") // 합산 총점
+
+  // ── 학생용 피드백 ──
+  // {
+  //   "praise": "구체적 칭찬 (3~4문장)",
+  //   "suggestion": "개선 제안 (1~2개, 부드럽게)",
+  //   "encouragement": "격려 한마디"
+  // }
+  feedbackStudent Json @map("feedback_student") @db.JsonB
+
+  // ── 교사용 피드백 ──
+  // {
+  //   "areaAnalysis": {
+  //     "content":    { "comment": "...", "score": 16 },
+  //     "structure":  { "comment": "...", "score": 12 },
+  //     "expression": { "comment": "...", "score": 11, "repetitions": [...] },
+  //     "grammar":    { "comment": "...", "score": 17, "errors": [...] },
+  //     "volume":     { "comment": "...", "score": 18 }
+  //   },
+  //   "overall": "종합 분석 (2~3문장)",
+  //   "comparisonWithPrevious": "이전 글 대비 변화",
+  //   "teachingDirection": "지도 방향 제안"
+  // }
+  feedbackTeacher Json @map("feedback_teacher") @db.JsonB
+
+  // ── 교사 검토 ──
+  approvalStatus  ApprovalStatus @default(PENDING) @map("approval_status")
+  teacherComment  String?        @map("teacher_comment") @db.Text // 교사가 추가한 코멘트
+  teacherEditedStudent Json?     @map("teacher_edited_student") @db.JsonB // 교사가 수정한 학생용 피드백 (null이면 원본 사용)
+  approvedAt      DateTime?      @map("approved_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  submission Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+
+  @@index([approvalStatus])
+  @@map("feedbacks")
+}
+
+// ────────────────────────────────────────
+// 8. 학년말 종합 보고서
+// ────────────────────────────────────────
+
+/// 학년말 종합 보고서
+model YearendReport {
+  id        String   @id @default(uuid())
+  studentId String   @map("student_id")
+  classId   String   @map("class_id")
+  year      Int
+
+  // reportTeacher: 교사/학부모용 상세 보고서 (JSON)
+  // {
+  //   "summary": "종합 분석 (3~4문단)",
+  //   "areaGrowth": { "content": { "start": 12, "end": 17, "comment": "..." }, ... },
+  //   "milestones": [{ "round": 8, "title": "...", "description": "..." }],
+  //   "bestSentences": [{ "round": 5, "sentence": "..." }],
+  //   "nextYearSuggestions": ["...", "..."]
+  // }
+  reportTeacher Json @map("report_teacher") @db.JsonB
+
+  // reportStudent: 학생용 성장 스토리 (JSON)
+  // {
+  //   "growthStory": "1년 성장 이야기 (따뜻한 반말)",
+  //   "bestMoments": "가장 빛났던 순간들",
+  //   "improvements": [{ "area": "표현", "before": "...", "after": "..." }],
+  //   "nextYearMission": ["미션1", "미션2"],
+  //   "teacherMessage": "선생님의 1년 마무리 메시지"
+  // }
+  reportStudent Json @map("report_student") @db.JsonB
+
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, year])
+  @@map("yearend_reports")
+}

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="글봄 로고">
+  <!-- 글봄 메인 컬러 배경, 앱 아이콘용 둥근 사각형 -->
+  <rect width="512" height="512" rx="112" fill="#1D9E75"/>
+  <!-- 글쓰기 한 줄(밑줄) -->
+  <rect x="138" y="374" width="236" height="20" rx="10" fill="#ffffff" opacity="0.92"/>
+  <!-- 줄기 -->
+  <path d="M256 380 V250" stroke="#ffffff" stroke-width="22" stroke-linecap="round"/>
+  <!-- 왼쪽 새싹 잎 -->
+  <path d="M256 306 C 196 306, 162 258, 172 192 C 236 196, 268 246, 256 306 Z" fill="#ffffff"/>
+  <!-- 오른쪽 새싹 잎 -->
+  <path d="M256 272 C 316 272, 350 224, 340 158 C 276 162, 244 212, 256 272 Z" fill="#C5EBDA"/>
+</svg>
