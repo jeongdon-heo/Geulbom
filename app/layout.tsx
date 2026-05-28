@@ -19,6 +19,10 @@ export const metadata: Metadata = {
     statusBarStyle: "default",
     title: "글봄",
   },
+  // apple-mobile-web-app-capable 의 표준 대체 메타(콘솔 deprecation 경고 해소)
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export const viewport: Viewport = {
@@ -35,6 +39,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="ko">
+      <head>
+        {/* Pretendard 공식 dynamic-subset CSS — 사용된 글자만 받아 가볍고, 깨진 단일 woff2 경로 문제 해소 */}
+        <link
+          rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.css"
+        />
+      </head>
       <body>
         <ServiceWorkerRegister />
         <AuthProvider>{children}</AuthProvider>
