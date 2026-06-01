@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Copy, Pencil, Plus, Trash2, Lock } from "lucide-react";
 import { RubricEditor } from "./RubricEditor";
+import { RubricPresetPicker } from "./RubricPresetPicker";
+import { presetToRubricView } from "./presets";
 
 // ── 공용 타입 ──
 
@@ -38,7 +40,8 @@ interface ApiResp<T> {
 
 type EditorState =
   | { open: false }
-  | { open: true; mode: "create" | "edit" | "duplicate"; rubric: RubricView | null };
+  | { open: true; phase: "pick" } // 전문가 템플릿 갤러리
+  | { open: true; phase: "edit"; mode: "create" | "edit" | "duplicate"; rubric: RubricView | null };
 
 export function RubricManager({ initial }: { initial: RubricView[] }) {
   const router = useRouter();
@@ -73,7 +76,7 @@ export function RubricManager({ initial }: { initial: RubricView[] }) {
       {!editor.open && (
         <div className="flex justify-end">
           <button
-            onClick={() => setEditor({ open: true, mode: "create", rubric: null })}
+            onClick={() => setEditor({ open: true, phase: "pick" })}
             className="btn-primary"
           >
             <Plus className="h-4 w-4" />새 루브릭
@@ -85,7 +88,24 @@ export function RubricManager({ initial }: { initial: RubricView[] }) {
         <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
       )}
 
-      {editor.open && (
+      {editor.open && editor.phase === "pick" && (
+        <RubricPresetPicker
+          onPickPreset={(preset) =>
+            setEditor({
+              open: true,
+              phase: "edit",
+              mode: "create",
+              rubric: presetToRubricView(preset),
+            })
+          }
+          onPickBlank={() =>
+            setEditor({ open: true, phase: "edit", mode: "create", rubric: null })
+          }
+          onCancel={() => setEditor({ open: false })}
+        />
+      )}
+
+      {editor.open && editor.phase === "edit" && (
         <RubricEditor
           mode={editor.mode}
           rubric={editor.rubric}
@@ -134,7 +154,7 @@ export function RubricManager({ initial }: { initial: RubricView[] }) {
               {/* 액션 */}
               <div className="flex items-center justify-end gap-1 border-t border-gray-100 pt-2">
                 <button
-                  onClick={() => setEditor({ open: true, mode: "duplicate", rubric: r })}
+                  onClick={() => setEditor({ open: true, phase: "edit", mode: "duplicate", rubric: r })}
                   className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                   title="복제하여 새로 만들기"
                 >
@@ -144,7 +164,7 @@ export function RubricManager({ initial }: { initial: RubricView[] }) {
                 {r.isOwner && (
                   <>
                     <button
-                      onClick={() => setEditor({ open: true, mode: "edit", rubric: r })}
+                      onClick={() => setEditor({ open: true, phase: "edit", mode: "edit", rubric: r })}
                       className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                     >
                       <Pencil className="h-4 w-4" />
