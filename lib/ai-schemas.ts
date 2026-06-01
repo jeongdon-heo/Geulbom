@@ -62,6 +62,15 @@ export const analysisResponseSchema = z.object({
         })
       )
       .default([]),
+    // 글의 주제와의 관련성 — 기존 데이터 호환을 위해 선택값
+    topicRelevance: z
+      .object({
+        rating: z.string(),
+        comment: z.string(),
+      })
+      .nullable()
+      .optional()
+      .default(null),
     overall: z.string(),
     comparisonWithPrevious: z.string().nullable().optional().default(null),
     teachingDirection: z.string(),

@@ -29,6 +29,7 @@ async function main() {
     assignmentTitle: "오늘의 일기",
     roundNumber: 1,
     writingType: "일기",
+    assignmentDescription: null,
     text: SAMPLE_TEXT,
     charCount: SAMPLE_TEXT.length,
     minChars: 100,

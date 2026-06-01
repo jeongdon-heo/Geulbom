@@ -87,6 +87,7 @@ export function buildAnalysisPrompt(params: {
   assignmentTitle: string;
   roundNumber: number;
   writingType: string;       // "일기", "독후감", "소감문" 등
+  assignmentDescription: string | null; // 과제 안내 / 주제 설명
   text: string;              // 학생이 쓴 글
   charCount: number;
   minChars: number | null;
@@ -102,6 +103,7 @@ export function buildAnalysisPrompt(params: {
     assignmentTitle,
     roundNumber,
     writingType,
+    assignmentDescription,
     text,
     charCount,
     minChars,
@@ -112,6 +114,19 @@ export function buildAnalysisPrompt(params: {
     previousRound,
     aiPromptNote,
   } = params;
+
+  // ── 글의 주제 / 과제 안내 (주제 관련성 평가 근거) ──
+  const topicSection =
+    assignmentDescription && assignmentDescription.trim()
+      ? `
+## 글의 주제 · 과제 안내
+"""
+${assignmentDescription.trim()}
+"""
+→ 학생의 글이 이 주제·안내에 얼마나 부합하는지(주제 관련성)를 평가하세요.`
+      : `
+## 글의 주제
+별도로 지정된 주제가 없습니다. 글 유형(${writingType})과 제목("${assignmentTitle}")에 비추어 글의 초점이 일관되고 글 유형에 맞는지를 주제 관련성으로 평가하세요.`;
 
   // ── 루브릭 영역 동적 생성 ──
   const rubricSection = rubricAreas
@@ -177,6 +192,7 @@ ${prevEntries}, 총점 ${prevTotal}점
 - 과제: ${assignmentTitle} (${roundNumber}회차)
 - 글 유형: ${writingType}
 - ${charInfo}
+${topicSection}
 ${previousContext}
 ${customNote}
 
@@ -196,6 +212,7 @@ ${rubricSection}
 
 ### A. 교사용 상세 분석
 - 각 영역별 점수와 근거
+- 글의 주제(과제 안내)와의 관련성: 주제에 잘 맞는지, 벗어나거나 빠진 부분은 없는지 (실제 내용을 근거로)
 - 구체적인 오류/개선점 (실제 문장을 인용하여)
 - 이전 회차 대비 변화 분석 (있는 경우)
 - 다음 지도 방향 제안
@@ -204,6 +221,7 @@ ${rubricSection}
 - 반말 존댓말(~해요, ~했어요)로, 따뜻하고 구체적으로
 - 잘한 점을 먼저 충분히 칭찬 (학생의 실제 문장을 인용)
 - 개선할 점은 1~2개만, "이렇게 바꿔보면 어떨까요?" 식으로
+- 글이 주제에서 벗어난 부분이 있으면, 제안에 부드럽게 포함해 주세요
 - 절대 혼내는 톤이 아님, 성장을 격려하는 톤
 
 ## 채점 원칙
@@ -226,6 +244,10 @@ ${scoresExample}
   "feedbackTeacher": {
     "areaAnalysis": {
 ${areaAnalysisExample}
+    },
+    "topicRelevance": {
+      "rating": "높음 | 보통 | 낮음 중 하나",
+      "comment": "글의 주제(과제 안내)와의 관련성 평가 (1~2문장, 글의 내용을 근거로)"
     },
     "grammarErrors": [
       {

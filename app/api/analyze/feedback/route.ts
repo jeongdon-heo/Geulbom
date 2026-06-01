@@ -112,6 +112,7 @@ export async function POST(req: NextRequest) {
     assignmentTitle: submission.assignmentRound.assignment.title,
     roundNumber: submission.assignmentRound.roundNumber,
     writingType: submission.assignmentRound.assignment.writingType,
+    assignmentDescription: submission.assignmentRound.assignment.description ?? null,
     text: submission.text,
     charCount: submission.charCount,
     minChars: submission.assignmentRound.assignment.minChars ?? null,

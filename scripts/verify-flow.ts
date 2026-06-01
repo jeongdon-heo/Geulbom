@@ -144,6 +144,7 @@ async function main() {
     assignmentTitle: full!.assignmentRound.assignment.title,
     roundNumber: full!.assignmentRound.roundNumber,
     writingType: full!.assignmentRound.assignment.writingType,
+    assignmentDescription: full!.assignmentRound.assignment.description ?? null,
     text: full!.text,
     charCount: full!.charCount,
     minChars: full!.assignmentRound.assignment.minChars ?? null,

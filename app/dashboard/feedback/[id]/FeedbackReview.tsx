@@ -37,6 +37,7 @@ interface StudentFeedback {
 
 interface TeacherFeedback {
   areaAnalysis: Record<string, { score: number; comment: string }>;
+  topicRelevance?: { rating: string; comment: string } | null;
   grammarErrors: {
     original: string;
     corrected: string;
@@ -48,6 +49,13 @@ interface TeacherFeedback {
   comparisonWithPrevious: string | null;
   teachingDirection: string;
 }
+
+// 주제 관련성 등급 → 뱃지 색상
+const RELEVANCE_BADGE: Record<string, string> = {
+  높음: "bg-teal-50 text-teal-700",
+  보통: "bg-amber-50 text-amber-700",
+  낮음: "bg-rose-50 text-rose-700",
+};
 
 interface Feedback {
   id: string;
@@ -296,6 +304,27 @@ export function FeedbackReview({
                   교사용 분석
                 </h2>
                 <p className="text-sm text-gray-800">{feedback.feedbackTeacher.overall}</p>
+
+                {feedback.feedbackTeacher.topicRelevance && (
+                  <div className="rounded-lg border border-gray-100 bg-bg-subtle p-2.5">
+                    <div className="mb-1 flex items-center gap-2">
+                      <span className="text-xs font-semibold text-gray-700">
+                        주제 관련성
+                      </span>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                          RELEVANCE_BADGE[feedback.feedbackTeacher.topicRelevance.rating] ??
+                          "bg-gray-100 text-gray-600"
+                        }`}
+                      >
+                        {feedback.feedbackTeacher.topicRelevance.rating}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-700">
+                      {feedback.feedbackTeacher.topicRelevance.comment}
+                    </p>
+                  </div>
+                )}
 
                 {feedback.feedbackTeacher.comparisonWithPrevious && (
                   <p className="rounded-lg bg-bg-subtle p-2 text-xs text-gray-700">
