@@ -138,7 +138,7 @@ async function main() {
     },
   });
   step("6a. 소유권 검증", full!.assignmentRound.assignment.class.teacherId === teacher.id);
-  const rt = full!.assignmentRound.assignment.rubricTemplate;
+  const rt = full!.assignmentRound.assignment.rubricTemplate!;
   const prompt = buildAnalysisPrompt({
     studentName: full!.student.name,
     assignmentTitle: full!.assignmentRound.assignment.title,

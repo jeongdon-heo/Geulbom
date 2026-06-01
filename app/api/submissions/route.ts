@@ -30,7 +30,17 @@ export async function POST(req: NextRequest) {
   const parsed = submissionUpsertSchema.safeParse(json);
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "입력값 오류");
 
-  const { assignmentRoundId, text, inputMethod, action, ocr } = parsed.data;
+  const { assignmentRoundId, answers, inputMethod, action, ocr } = parsed.data;
+
+  // 학기말 글쓰기는 answers(질문별 답변)를 보냅니다.
+  // 서버가 answers로부터 읽기용 text를 조립해 글자수/교사뷰와 호환시킵니다.
+  // 일반 과제는 text를 그대로 사용합니다.
+  const text =
+    answers && answers.length > 0
+      ? answers
+          .map((a) => `Q. ${a.question}\nA. ${a.answer.trim()}`)
+          .join("\n\n")
+      : parsed.data.text ?? "";
 
   // 학생 본인이 보내는 라우트이므로 TEACHER_OCR 는 거부
   if (inputMethod === "TEACHER_OCR") {
@@ -55,7 +65,13 @@ export async function POST(req: NextRequest) {
   // 제출 시 최소 글자 수 체크
   const charCount = [...text].length; // 코드 포인트 기준
   if (action === "SUBMIT") {
-    if (text.trim().length === 0) return fail("글을 입력해주세요.");
+    if (answers && answers.length > 0) {
+      // 학기말 글쓰기: 최소 한 개 질문에는 답해야 제출 가능
+      if (!answers.some((a) => a.answer.trim().length > 0))
+        return fail("질문에 답을 적어주세요.");
+    } else if (text.trim().length === 0) {
+      return fail("글을 입력해주세요.");
+    }
     if (round.assignment.minChars && charCount < round.assignment.minChars) {
       return fail(
         `최소 ${round.assignment.minChars}자 이상 써야 제출할 수 있어요. (지금 ${charCount}자)`
@@ -82,6 +98,10 @@ export async function POST(req: NextRequest) {
   const data = {
     text,
     charCount,
+    answers:
+      answers && answers.length > 0
+        ? (answers as unknown as Prisma.InputJsonValue)
+        : Prisma.JsonNull,
     inputMethod,
     status: action === "SUBMIT" ? ("SUBMITTED" as const) : ("DRAFT" as const),
     submittedAt: action === "SUBMIT" ? new Date() : null,

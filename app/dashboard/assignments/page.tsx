@@ -101,7 +101,9 @@ export default async function AssignmentsPage() {
                       <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                         <span>{a.class.name}</span>
                         <span>·</span>
-                        <span>루브릭: {a.rubricTemplate.name}</span>
+                        <span>
+                          {a.rubricTemplate ? `루브릭: ${a.rubricTemplate.name}` : "학기말 글쓰기"}
+                        </span>
                         <span>·</span>
                         <span className="inline-flex items-center gap-1">
                           <Layers className="h-3 w-3" />

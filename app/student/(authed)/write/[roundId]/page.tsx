@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { getStudentSession } from "@/lib/student-session";
 import { prisma } from "@/lib/db";
 import { WriteEditor } from "./WriteEditor";
+import { SemesterEndEditor } from "./SemesterEndEditor";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,8 @@ export default async function WritePage({
           recommendedChars: true,
           isActive: true,
           classId: true,
+          type: true,
+          questions: true,
         },
       },
     },
@@ -54,7 +57,14 @@ export default async function WritePage({
         assignmentRoundId: round.id,
       },
     },
-    select: { id: true, text: true, charCount: true, status: true, submittedAt: true },
+    select: {
+      id: true,
+      text: true,
+      charCount: true,
+      status: true,
+      submittedAt: true,
+      answers: true,
+    },
   });
 
   // 이미 제출했으면 편집 불가 → 보기 화면으로
@@ -82,15 +92,40 @@ export default async function WritePage({
     );
   }
 
+  const roundInfo = {
+    id: round.id,
+    roundNumber: round.roundNumber,
+    deadline: round.deadline.toISOString(),
+  };
+
+  // 학기말 글쓰기: 질문별 답변 에디터
+  if (round.assignment.type === "SEMESTER_END") {
+    const questions = Array.isArray(round.assignment.questions)
+      ? (round.assignment.questions as { id: string; text: string }[])
+      : [];
+    const initialAnswers: Record<string, string> = {};
+    if (Array.isArray(existing?.answers)) {
+      for (const a of existing!.answers as {
+        questionId: string;
+        answer: string;
+      }[]) {
+        initialAnswers[a.questionId] = a.answer;
+      }
+    }
+    return (
+      <SemesterEndEditor
+        round={roundInfo}
+        assignment={{
+          title: round.assignment.title,
+          description: round.assignment.description,
+        }}
+        questions={questions}
+        initialAnswers={initialAnswers}
+      />
+    );
+  }
+
   return (
-    <WriteEditor
-      round={{
-        id: round.id,
-        roundNumber: round.roundNumber,
-        deadline: round.deadline.toISOString(),
-      }}
-      assignment={round.assignment}
-      initial={existing}
-    />
+    <WriteEditor round={roundInfo} assignment={round.assignment} initial={existing} />
   );
 }

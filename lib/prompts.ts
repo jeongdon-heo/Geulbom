@@ -396,6 +396,64 @@ ${areaGrowthExample}
 
 
 // ============================================================
+// 3-2. 행동특성 및 종합의견 초안 프롬프트 (학기말 글쓰기 기반)
+// ============================================================
+
+const BEHAVIOR_LENGTH_GUIDE: Record<string, string> = {
+  brief: "200자 내외로 간결하게",
+  standard: "350자 내외로",
+  detailed: "500자 내외로 풍부하게",
+};
+
+export function buildBehaviorReportPrompt(params: {
+  studentName: string;
+  className: string;
+  year: number;
+  qa: { question: string; answer: string }[];
+  length: "brief" | "standard" | "detailed";
+  teacherNote: string | null;
+}): string {
+  const { studentName, className, year, qa, length, teacherNote } = params;
+
+  // 답변이 있는 질문만 포함
+  const qaSection = qa
+    .filter((x) => x.answer.trim().length > 0)
+    .map((x, i) => `${i + 1}. (질문) ${x.question}\n   (학생 답변) ${x.answer.trim()}`)
+    .join("\n\n");
+
+  const lengthGuide = BEHAVIOR_LENGTH_GUIDE[length] ?? BEHAVIOR_LENGTH_GUIDE.standard;
+  const customNote = teacherNote ? `\n## 교사 요청사항\n${teacherNote}` : "";
+
+  return `당신은 대한민국 초등학교 담임교사로서, 학교생활기록부의 "행동특성 및 종합의견"을 작성하는 전문가입니다.
+아래는 학생 "${studentName}" (${className}, ${year}년)이 학기말에 자기 자신을 돌아보며 쓴 질문별 답변입니다.
+이 자료를 근거로 "행동특성 및 종합의견" 초안을 작성해주세요.
+
+## 학생의 학기말 글쓰기 답변
+
+${qaSection}
+${customNote}
+
+## 작성 지침
+
+- 생활기록부 문체를 따르세요: 격식체·개조식 명사형 종결("~함", "~임", "~을 보임", "~하는 모습이 관찰됨").
+- **관찰 가능한 행동·태도·성품** 중심으로 서술하세요. 막연한 칭찬이 아니라 구체적 근거(학생 답변에 드러난 사례)를 녹여주세요.
+- 긍정적이고 발전 가능성을 보여주는 방향으로 쓰되, 사실에 근거하지 않은 과장이나 단정은 피하세요.
+- 학업 성취 등수·점수, 가정환경·종교·신체 등 민감하거나 차별적 표현은 절대 쓰지 마세요.
+- 분량은 ${lengthGuide} 한 단락으로 작성하세요.
+- 이것은 교사가 검토·수정할 **초안**입니다. 자연스럽게 바로 붙여넣어 다듬을 수 있게 작성하세요.
+
+## 응답 형식
+
+반드시 아래 JSON만 출력하세요. 다른 텍스트나 마크다운 없이 JSON만 응답합니다.
+
+{
+  "draft": "행동특성 및 종합의견 초안 (한 단락, 생활기록부 문체)",
+  "keywords": ["핵심 특성 키워드 (예: 성실, 배려, 리더십)", "..."]
+}`;
+}
+
+
+// ============================================================
 // 4. 기본 루브릭 템플릿 (시스템 초기값)
 // ============================================================
 
@@ -430,6 +488,25 @@ export const DEFAULT_RUBRIC_AREAS: RubricArea[] = [
     maxScore: 20,
     description: "최소 글자 수를 충족하고, 내용에 비해 적절한 양인가",
   },
+];
+
+// ── 학기말 글쓰기(행동특성 자료 수집) 기본 질문 세트 ──
+// 교사가 새 과제 폼에서 초기값으로 사용하며 자유롭게 편집할 수 있습니다.
+// 각 질문은 생활기록부 "행동특성 및 종합의견"의 관찰 영역과 대응됩니다.
+export interface BehaviorQuestion {
+  id: string;
+  text: string;
+}
+
+export const DEFAULT_BEHAVIOR_QUESTIONS: BehaviorQuestion[] = [
+  { id: "q1", text: "이번 학기에 가장 열심히 노력한 일은 무엇인가요? 그 과정을 자세히 써보세요." },
+  { id: "q2", text: "공부하거나 활동할 때 나는 어떤 태도로 참여했나요? (집중, 끈기, 준비 등)" },
+  { id: "q3", text: "친구들과 어떻게 지냈나요? 도움을 주거나 받았던 일이 있다면 써보세요." },
+  { id: "q4", text: "우리 반이나 친구를 위해 내가 한 일(배려, 양보, 봉사 등)이 있나요?" },
+  { id: "q5", text: "맡은 역할이나 책임(1인 1역, 모둠 활동 등)을 어떻게 해냈나요?" },
+  { id: "q6", text: "이번 학기에 가장 크게 성장하거나 달라진 점은 무엇인가요?" },
+  { id: "q7", text: "내가 좋아하거나 관심 있는 것, 잘하는 것은 무엇인가요?" },
+  { id: "q8", text: "다음 학기에 더 노력하고 싶은 점이 있다면 무엇인가요?" },
 ];
 
 export const DEFAULT_SCORING_GUIDE: ScoringGuide = {

@@ -127,3 +127,12 @@ export const yearendReportResponseSchema = z.object({
 });
 
 export type YearendReportResponse = z.infer<typeof yearendReportResponseSchema>;
+
+
+// ── 행동특성 및 종합의견 초안 응답 ──
+export const behaviorReportResponseSchema = z.object({
+  draft: z.string().min(1),
+  keywords: z.array(z.string()).default([]),
+});
+
+export type BehaviorReportResponse = z.infer<typeof behaviorReportResponseSchema>;

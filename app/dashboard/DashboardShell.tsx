@@ -16,6 +16,7 @@ import {
   ScanText,
   FileText,
   ListChecks,
+  UserCheck,
 } from "lucide-react";
 
 interface NavItem {
@@ -33,6 +34,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/ocr", label: "OCR 업로드", icon: ScanText },
   { href: "/dashboard/growth", label: "성장 분석", icon: LineChart },
   { href: "/dashboard/reports", label: "학년말 보고서", icon: FileText },
+  { href: "/dashboard/behavior", label: "행동특성", icon: UserCheck },
 ];
 
 export function DashboardShell({

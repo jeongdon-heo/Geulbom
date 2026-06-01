@@ -275,7 +275,7 @@ export default async function StudentDetailPage({
                               {" "}
                               /{" "}
                               {s.assignmentRound.assignment.rubricTemplate
-                                .totalScore}
+                                ?.totalScore ?? 100}
                             </span>
                           </p>
                         ) : (

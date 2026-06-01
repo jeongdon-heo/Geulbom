@@ -66,7 +66,7 @@ export default async function StudentFeedbackDetailPage({
 
   const fb = submission.feedback;
   const showScore = submission.assignmentRound.assignment.showScoreToStudent;
-  const rubric = submission.assignmentRound.assignment.rubricTemplate;
+  const rubric = submission.assignmentRound.assignment.rubricTemplate!;
   const areas = rubric.areas as unknown as { key: string; name: string; maxScore: number }[];
   // 교사가 수정한 버전이 있으면 그것을, 없으면 AI 원본
   const studentFb = (fb.teacherEditedStudent ?? fb.feedbackStudent) as unknown as StudentFb;

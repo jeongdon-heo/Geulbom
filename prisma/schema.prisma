@@ -84,9 +84,10 @@ model Student {
   pin       String?  @db.VarChar(255) // 학생 접속용 PIN의 bcrypt 해시 (선택). 평문 PIN은 4~10자.
   createdAt DateTime @default(now()) @map("created_at")
 
-  class          Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
-  submissions    Submission[]
-  yearendReports YearendReport[]
+  class           Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  submissions     Submission[]
+  yearendReports  YearendReport[]
+  behaviorReports BehaviorReport[]
 
   @@unique([classId, number])
   @@map("students")
@@ -135,8 +136,9 @@ model RubricTemplate {
 
 /// 과제 유형
 enum AssignmentType {
-  REGULAR   // 정기 (주간 일기, 매일 한 줄 쓰기 등)
-  IRREGULAR // 비정기 (독후감, 현장체험 소감문 등)
+  REGULAR      // 정기 (주간 일기, 매일 한 줄 쓰기 등)
+  IRREGULAR    // 비정기 (독후감, 현장체험 소감문 등)
+  SEMESTER_END // 학기말 글쓰기 (행동특성 및 종합의견 자료 수집 — 채점/피드백 없음)
 }
 
 /// 반복 주기
@@ -151,13 +153,19 @@ enum Frequency {
 model Assignment {
   id               String         @id @default(uuid())
   classId          String         @map("class_id")
-  rubricTemplateId String         @map("rubric_template_id")
+  // 학기말 글쓰기(SEMESTER_END)는 채점하지 않으므로 루브릭이 없습니다(nullable).
+  rubricTemplateId String?        @map("rubric_template_id")
   title            String         @db.VarChar(200) // "주간 일기", "현장체험학습 소감문"
   description      String?        @db.Text         // 안내문, 주제 설명
-  type             AssignmentType                   // REGULAR | IRREGULAR
+  type             AssignmentType                   // REGULAR | IRREGULAR | SEMESTER_END
   writingType      String         @db.VarChar(30)  // "일기" | "독후감" | "소감문" | "설명문" | "논설문" | "편지" | "기타"
   minChars         Int?           @map("min_chars")         // 최소 글자 수
   recommendedChars Int?           @map("recommended_chars") // 권장 글자 수
+
+  // ── 학기말 글쓰기(SEMESTER_END) 전용 ──
+  // questions: 행동특성 자료 수집용 질문 목록
+  // [{ "id": "q1", "text": "올 한 학기 가장 뿌듯했던 일은 무엇인가요?" }, ...]
+  questions Json? @db.JsonB
 
   // ── 정기 과제 전용 필드 ──
   frequency   Frequency? // DAILY, WEEKLY, BIWEEKLY, MONTHLY
@@ -180,9 +188,10 @@ model Assignment {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  class          Class          @relation(fields: [classId], references: [id], onDelete: Cascade)
-  rubricTemplate RubricTemplate @relation(fields: [rubricTemplateId], references: [id])
-  rounds         AssignmentRound[]
+  class           Class            @relation(fields: [classId], references: [id], onDelete: Cascade)
+  rubricTemplate  RubricTemplate?  @relation(fields: [rubricTemplateId], references: [id])
+  rounds          AssignmentRound[]
+  behaviorReports BehaviorReport[]
 
   @@map("assignments")
 }
@@ -226,8 +235,11 @@ model Submission {
   id               String           @id @default(uuid())
   studentId        String           @map("student_id")
   assignmentRoundId String          @map("assignment_round_id")
-  text             String           @db.Text          // 최종 텍스트
+  text             String           @db.Text          // 최종 텍스트 (학기말은 Q&A 연결 문자열)
   charCount        Int              @map("char_count") // 글자 수
+  // answers: 학기말 글쓰기(SEMESTER_END) 질문별 답변 구조 보존
+  // [{ "questionId": "q1", "question": "...", "answer": "..." }, ...]
+  answers          Json?            @db.JsonB
   inputMethod      InputMethod      @map("input_method")
   status           SubmissionStatus @default(DRAFT)
   submittedAt      DateTime?        @map("submitted_at")
@@ -368,4 +380,34 @@ model YearendReport {
 
   @@unique([studentId, year])
   @@map("yearend_reports")
+}
+
+// ────────────────────────────────────────
+// 9. 행동특성 및 종합의견 초안 (학기말 글쓰기 기반)
+// ────────────────────────────────────────
+
+/// 생활기록부 "행동특성 및 종합의견" 교사용 초안
+/// 학기말 글쓰기(SEMESTER_END) 과제의 학생 답변을 AI가 분석하여 생성합니다.
+model BehaviorReport {
+  id           String   @id @default(uuid())
+  studentId    String   @map("student_id")
+  assignmentId String   @map("assignment_id") // 어떤 학기말 글쓰기 과제 기반인지
+
+  // content: 교사용 초안 (JSON)
+  // {
+  //   "draft": "행동특성 및 종합의견 초안 (격식체·개조식, 한 단락)",
+  //   "keywords": ["성실", "배려", "리더십"]
+  // }
+  content    Json   @db.JsonB
+  length     String @db.VarChar(10) // "brief" | "standard" | "detailed"
+  aiProvider String @map("ai_provider") @db.VarChar(10) // "gemini" | "claude"
+
+  generatedAt DateTime @default(now()) @map("generated_at")
+
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+
+  // 한 학생 × 한 학기말 과제당 초안 1개
+  @@unique([studentId, assignmentId])
+  @@map("behavior_reports")
 }

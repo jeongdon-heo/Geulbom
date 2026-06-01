@@ -138,14 +138,21 @@ export type CreateRubricInput = z.infer<typeof createRubricSchema>;
 export const updateRubricSchema = rubricBodySchema;
 export type UpdateRubricInput = z.infer<typeof updateRubricSchema>;
 
+// 학기말 글쓰기 질문 1개
+export const assignmentQuestionSchema = z.object({
+  id: z.string().min(1).max(40),
+  text: z.string().min(1, "질문 내용을 입력해주세요.").max(300),
+});
+
 // 과제 생성
 export const createAssignmentSchema = z
   .object({
     classId: z.string().uuid(),
-    rubricTemplateId: z.string().uuid(),
+    // 학기말 글쓰기(SEMESTER_END)는 루브릭이 없으므로 선택값입니다.
+    rubricTemplateId: z.string().uuid().optional().nullable(),
     title: z.string().min(1).max(200),
     description: z.string().max(2000).optional().nullable(),
-    type: z.enum(["REGULAR", "IRREGULAR"]),
+    type: z.enum(["REGULAR", "IRREGULAR", "SEMESTER_END"]),
     writingType: z.string().min(1).max(30), // "일기", "독후감", "주장하는 글" 등
     minChars: z.number().int().min(0).max(10000).optional().nullable(),
     recommendedChars: z.number().int().min(0).max(10000).optional().nullable(),
@@ -157,16 +164,19 @@ export const createAssignmentSchema = z
     dayOfWeek: z.number().int().min(0).max(6).optional().nullable(), // 0=일 ~ 6=토
     startDate: z.string().datetime().optional().nullable(),
     endDate: z.string().datetime().optional().nullable(),
-    // 비정기 전용
+    // 비정기 / 학기말 전용 (단일 마감)
     deadline: z.string().datetime().optional().nullable(),
+    // 학기말 글쓰기 전용 (질문 목록)
+    questions: z.array(assignmentQuestionSchema).max(15).optional().nullable(),
   })
   .refine(
-    (v) =>
-      v.type === "IRREGULAR"
-        ? !!v.deadline
-        : !!(v.frequency && v.startDate && v.endDate),
+    (v) => {
+      // 마감/일정 필수 조건
+      if (v.type === "REGULAR") return !!(v.frequency && v.startDate && v.endDate);
+      return !!v.deadline; // IRREGULAR | SEMESTER_END
+    },
     {
-      message: "정기 과제는 frequency/startDate/endDate, 비정기 과제는 deadline이 필요합니다.",
+      message: "정기 과제는 frequency/startDate/endDate, 비정기·학기말 과제는 deadline이 필요합니다.",
     }
   )
   .refine(
@@ -175,6 +185,16 @@ export const createAssignmentSchema = z
         ? v.dayOfWeek !== null && v.dayOfWeek !== undefined
         : true,
     { message: "주간/격주 과제는 요일(dayOfWeek)이 필요합니다." }
+  )
+  .refine(
+    // 정기/비정기는 루브릭 필수, 학기말은 불필요
+    (v) => (v.type === "SEMESTER_END" ? true : !!v.rubricTemplateId),
+    { message: "루브릭을 선택해주세요." }
+  )
+  .refine(
+    // 학기말은 질문 1개 이상 필요
+    (v) => (v.type === "SEMESTER_END" ? !!v.questions && v.questions.length >= 1 : true),
+    { message: "학기말 글쓰기는 질문을 최소 1개 추가해주세요." }
   );
 export type CreateAssignmentInput = z.infer<typeof createAssignmentSchema>;
 
@@ -203,9 +223,19 @@ export const ocrPayloadSchema = z.object({
 });
 export type OcrPayload = z.infer<typeof ocrPayloadSchema>;
 
+// 학기말 글쓰기 질문별 답변 1개
+export const submissionAnswerSchema = z.object({
+  questionId: z.string().min(1).max(40),
+  question: z.string().max(300),
+  answer: z.string().max(5000),
+});
+
 export const submissionUpsertSchema = z.object({
   assignmentRoundId: z.string().uuid(),
-  text: z.string().max(10000, "글이 너무 깁니다."),
+  // 학기말 글쓰기는 answers만 보낼 수 있어 text는 선택값. 둘 다 없으면 서버가 거부.
+  text: z.string().max(10000, "글이 너무 깁니다.").optional(),
+  // 학기말 글쓰기: 질문별 답변. 있으면 서버가 text를 조립합니다.
+  answers: z.array(submissionAnswerSchema).max(15).optional().nullable(),
   inputMethod: z.enum(["TYPED", "STUDENT_OCR", "TEACHER_OCR"]).default("TYPED"),
   action: z.enum(["SAVE_DRAFT", "SUBMIT"]),
   ocr: ocrPayloadSchema.optional().nullable(),
@@ -236,3 +266,12 @@ export const updateFeedbackSchema = z.object({
   approve: z.boolean().optional(), // true면 APPROVED로 전환
 });
 export type UpdateFeedbackInput = z.infer<typeof updateFeedbackSchema>;
+
+// ── 행동특성 및 종합의견 초안 생성 ──
+export const behaviorReportPostSchema = z.object({
+  studentId: z.string().uuid(),
+  assignmentId: z.string().uuid(),
+  length: z.enum(["brief", "standard", "detailed"]).default("standard"),
+  provider: z.enum(["gemini", "claude"]).optional(),
+});
+export type BehaviorReportPostInput = z.infer<typeof behaviorReportPostSchema>;

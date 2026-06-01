@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { fail, ok } from "@/lib/api";
 import { requireTeacher } from "@/lib/session";
@@ -55,14 +56,16 @@ export async function POST(req: NextRequest) {
   if (!cls) return fail("학급을 찾을 수 없습니다.", 404);
   if (cls.teacherId !== auth.teacherId) return fail("권한이 없습니다.", 403);
 
-  // 루브릭 접근권 (본인 것 or 관리자 시드)
-  const rubric = await prisma.rubricTemplate.findUnique({
-    where: { id: v.rubricTemplateId },
-    include: { teacher: { select: { role: true } } },
-  });
-  if (!rubric) return fail("루브릭을 찾을 수 없습니다.", 404);
-  if (rubric.teacherId !== auth.teacherId && rubric.teacher.role !== "admin") {
-    return fail("이 루브릭을 사용할 권한이 없습니다.", 403);
+  // 루브릭 접근권 (본인 것 or 관리자 시드) — 학기말 글쓰기는 루브릭이 없음
+  if (v.rubricTemplateId) {
+    const rubric = await prisma.rubricTemplate.findUnique({
+      where: { id: v.rubricTemplateId },
+      include: { teacher: { select: { role: true } } },
+    });
+    if (!rubric) return fail("루브릭을 찾을 수 없습니다.", 404);
+    if (rubric.teacherId !== auth.teacherId && rubric.teacher.role !== "admin") {
+      return fail("이 루브릭을 사용할 권한이 없습니다.", 403);
+    }
   }
 
   // 회차 계획 (정기만)
@@ -86,13 +89,17 @@ export async function POST(req: NextRequest) {
     const a = await tx.assignment.create({
       data: {
         classId: v.classId,
-        rubricTemplateId: v.rubricTemplateId,
+        rubricTemplateId: v.rubricTemplateId ?? null,
         title: v.title,
         description: v.description ?? null,
         type: v.type,
         writingType: v.writingType,
         minChars: v.minChars ?? null,
         recommendedChars: v.recommendedChars ?? null,
+        questions:
+          v.type === "SEMESTER_END" && v.questions
+            ? (v.questions as unknown as Prisma.InputJsonValue)
+            : Prisma.JsonNull,
         frequency: v.frequency ?? null,
         dayOfWeek: v.dayOfWeek ?? null,
         startDate: v.startDate ? new Date(v.startDate) : null,

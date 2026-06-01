@@ -70,8 +70,9 @@ export async function POST(req: NextRequest) {
   if (submission.status !== "SUBMITTED")
     return fail("제출 완료된 글만 분석할 수 있습니다.");
 
-  // 루브릭 areas/scoringGuide
+  // 루브릭 areas/scoringGuide — 학기말 글쓰기(루브릭 없음)는 분석 대상이 아님
   const rubric = submission.assignmentRound.assignment.rubricTemplate;
+  if (!rubric) return fail("이 과제는 루브릭이 없어 AI 분석 대상이 아닙니다.", 422);
   const rubricAreas = rubric.areas as unknown as RubricArea[];
   const scoringGuide = (rubric.scoringGuide as unknown as ScoringGuide | null) ?? null;
 

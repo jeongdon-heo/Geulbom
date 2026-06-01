@@ -69,9 +69,9 @@ export default async function FeedbackDetailPage({
         },
         round: { roundNumber: submission.assignmentRound.roundNumber },
         rubric: {
-          name: submission.assignmentRound.assignment.rubricTemplate.name,
-          totalScore: submission.assignmentRound.assignment.rubricTemplate.totalScore,
-          areas: submission.assignmentRound.assignment.rubricTemplate
+          name: submission.assignmentRound.assignment.rubricTemplate!.name,
+          totalScore: submission.assignmentRound.assignment.rubricTemplate!.totalScore,
+          areas: submission.assignmentRound.assignment.rubricTemplate!
             .areas as unknown as { key: string; name: string; maxScore: number }[],
         },
       }}

@@ -145,7 +145,7 @@ export default async function FeedbackListPage({
                         {r.feedback.totalScore}
                         <span className="text-xs font-normal text-gray-500">
                           {" "}
-                          / {r.assignmentRound.assignment.rubricTemplate.totalScore}
+                          / {r.assignmentRound.assignment.rubricTemplate?.totalScore ?? 100}
                         </span>
                       </p>
                     ) : (

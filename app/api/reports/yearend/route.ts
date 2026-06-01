@@ -105,9 +105,10 @@ export async function POST(req: NextRequest) {
   // 가장 최근 루브릭을 기준으로 영역 정보 사용
   const latest = submissions[submissions.length - 1];
   const rubricAreas =
-    (latest.assignmentRound.assignment.rubricTemplate.areas as unknown as RubricArea[]) ??
+    (latest.assignmentRound.assignment.rubricTemplate?.areas as unknown as RubricArea[]) ??
     [];
-  const totalScoreMax = latest.assignmentRound.assignment.rubricTemplate.totalScore;
+  const totalScoreMax =
+    latest.assignmentRound.assignment.rubricTemplate?.totalScore ?? 100;
 
   if (rubricAreas.length === 0)
     return fail("루브릭 영역 정보가 없습니다.", 422);

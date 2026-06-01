@@ -8,7 +8,11 @@ import { AssignmentActions } from "./AssignmentActions";
 
 export const dynamic = "force-dynamic";
 
-const TYPE_LABEL: Record<string, string> = { REGULAR: "정기", IRREGULAR: "비정기" };
+const TYPE_LABEL: Record<string, string> = {
+  REGULAR: "정기",
+  IRREGULAR: "비정기",
+  SEMESTER_END: "학기말",
+};
 const FREQ_LABEL: Record<string, string> = {
   DAILY: "매일",
   WEEKLY: "주간",
@@ -75,7 +79,8 @@ export default async function AssignmentDetailPage({
           </div>
           <h1 className="text-2xl font-bold text-gray-900">{a.title}</h1>
           <p className="mt-1 text-sm text-gray-500">
-            {a.class.name} · {a.writingType} · 루브릭 {a.rubricTemplate.name}
+            {a.class.name} · {a.writingType}
+            {a.rubricTemplate ? ` · 루브릭 ${a.rubricTemplate.name}` : ""}
           </p>
         </div>
         <AssignmentActions
@@ -117,6 +122,19 @@ export default async function AssignmentDetailPage({
             안내
           </h2>
           <p className="whitespace-pre-wrap text-sm text-gray-700">{a.description}</p>
+        </div>
+      )}
+
+      {a.type === "SEMESTER_END" && Array.isArray(a.questions) && (
+        <div className="card mt-4">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-gray-500">
+            질문 ({(a.questions as { id: string; text: string }[]).length})
+          </h2>
+          <ol className="list-decimal space-y-1.5 pl-5 text-sm text-gray-700">
+            {(a.questions as { id: string; text: string }[]).map((q) => (
+              <li key={q.id}>{q.text}</li>
+            ))}
+          </ol>
         </div>
       )}
 
