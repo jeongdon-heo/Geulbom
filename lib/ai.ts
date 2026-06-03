@@ -9,7 +9,7 @@ import Anthropic from "@anthropic-ai/sdk";
 
 export type AIProvider = "gemini" | "claude";
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+const GEMINI_MODEL = "gemini-2.5-flash";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 
 export interface AIClient {
