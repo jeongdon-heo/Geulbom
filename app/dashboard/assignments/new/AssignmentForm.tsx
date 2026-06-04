@@ -30,7 +30,7 @@ interface QuestionItem {
   text: string;
 }
 
-const WRITING_TYPES = ["일기", "독후감", "관찰글", "주장하는 글", "설명하는 글", "감상문"];
+const WRITING_TYPES = ["일기", "생각 일지", "PMI 쓰기", "독후감", "관찰글", "주장하는 글", "설명하는 글", "감상문"];
 const DOW_LABEL = ["일", "월", "화", "수", "목", "금", "토"];
 
 const TYPE_OPTIONS: { value: AssignType; label: string; desc: string }[] = [
