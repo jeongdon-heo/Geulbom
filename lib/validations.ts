@@ -269,6 +269,12 @@ export const updateFeedbackSchema = z.object({
 });
 export type UpdateFeedbackInput = z.infer<typeof updateFeedbackSchema>;
 
+// 학생이 다듬은 글을 참고해 다시 써 보는 글 (학생 전용)
+export const studentRewriteSchema = z.object({
+  text: z.string().max(10000, "글이 너무 깁니다."),
+});
+export type StudentRewriteInput = z.infer<typeof studentRewriteSchema>;
+
 // ── 행동특성 및 종합의견 초안 생성 ──
 export const behaviorReportPostSchema = z.object({
   studentId: z.string().uuid(),

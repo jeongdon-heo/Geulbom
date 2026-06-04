@@ -293,7 +293,7 @@ export function FeedbackReview({
                   <p className="mt-1.5 text-xs text-gray-500">
                     맞춤법·문법 오류와 제안을 반영한 글이에요. 자유롭게 고친 뒤
                     <span className="font-medium text-gray-700"> 저장</span>하면, 승인 후
-                    학생 피드백의 &lsquo;고쳐 쓴 글&rsquo;로 보여집니다.
+                    학생 피드백의 &lsquo;이렇게 고쳐보면 어때요?&rsquo;로 보여집니다.
                   </p>
                 </>
               ) : (
