@@ -82,6 +82,13 @@ export function buildOcrPrompt(): string {
 // 2. 글쓰기 분석 프롬프트 — 핵심 피드백 생성
 // ============================================================
 
+// 활동형 글쓰기 유형 설명 — AI가 글의 의도와 형식을 이해하도록 보조.
+// (과제 폼의 글 종류 목록과 키를 맞춤. 일반 유형은 이름만으로 충분해 생략.)
+const WRITING_TYPE_GUIDES: Record<string, string> = {
+  "생각 일지": "주제나 경험에 대한 자신의 생각·느낌을 솔직하게 풀어 쓰는 글입니다. 정해진 정답보다 생각의 깊이와 근거, 솔직한 표현을 중시하세요.",
+  "PMI 쓰기": "하나의 주제에 대해 장점(Plus), 단점(Minus), 흥미로운 점(Interesting)을 나누어 쓰는 활동입니다. 세 관점이 고루 다뤄졌는지, 각 항목이 주제와 맞고 구체적인지를 살펴보세요.",
+};
+
 export function buildAnalysisPrompt(params: {
   studentName: string;
   assignmentTitle: string;
@@ -114,6 +121,11 @@ export function buildAnalysisPrompt(params: {
     previousRound,
     aiPromptNote,
   } = params;
+
+  // ── 글 유형 설명 (활동형 글쓰기는 AI가 의도를 알도록 안내) ──
+  const writingTypeNote = WRITING_TYPE_GUIDES[writingType]
+    ? `\n  · ${writingType}: ${WRITING_TYPE_GUIDES[writingType]}`
+    : "";
 
   // ── 글의 주제 / 과제 안내 (주제 관련성 평가 근거) ──
   const topicSection =
@@ -190,7 +202,7 @@ ${prevEntries}, 총점 ${prevTotal}점
 
 - 학생: ${studentName}
 - 과제: ${assignmentTitle} (${roundNumber}회차)
-- 글 유형: ${writingType}
+- 글 유형: ${writingType}${writingTypeNote}
 - ${charInfo}
 ${topicSection}
 ${previousContext}
@@ -274,6 +286,74 @@ ${areaAnalysisExample}
     "suggestion": "개선할 점 1~2개를 따뜻하게 제안 (2~3문장, 예시 문장 포함)",
     "encouragement": "격려와 응원 한마디 (1~2문장)"
   }
+}`;
+}
+
+
+// ============================================================
+// 2-1. 글 다듬기(수정해 주기) 프롬프트
+// 교사가 "수정해 주기(AI)"를 누르면, 피드백(맞춤법·문법 오류, 제안)에
+// 근거해 학생 글을 다듬은 버전을 만든다. 학생이 원본과 비교할 모범 예시.
+// ============================================================
+
+export function buildCorrectionPrompt(params: {
+  writingType: string;
+  originalText: string;
+  grammarErrors: { original: string; corrected: string; type: string }[];
+  repetitions: { word: string; alternatives: string[] }[];
+  suggestion: string | null; // 학생용 피드백의 개선 제안
+}): string {
+  const { writingType, originalText, grammarErrors, repetitions, suggestion } = params;
+
+  const grammarSection =
+    grammarErrors.length > 0
+      ? grammarErrors
+          .map((g) => `- "${g.original}" → "${g.corrected}" (${g.type})`)
+          .join("\n")
+      : "- (지적된 맞춤법·문법 오류 없음)";
+
+  const repetitionSection =
+    repetitions.length > 0
+      ? repetitions
+          .map(
+            (r) =>
+              `- "${r.word}"이(가) 반복됨${
+                r.alternatives.length > 0 ? ` → ${r.alternatives.join(", ")} 등으로 다양화` : ""
+              }`
+          )
+          .join("\n")
+      : "- (지적된 반복 표현 없음)";
+
+  return `당신은 대한민국 초등학교 4학년 글쓰기를 지도하는 따뜻한 교사입니다.
+한 학생이 쓴 ${writingType}을(를), 아래 피드백에 근거해 **자연스럽게 다듬어** 주세요.
+이 다듬은 글은 학생이 자기 원본과 나란히 보며 "이렇게 고치면 좋구나"를 배우는 모범 예시입니다.
+
+## 다듬기 원칙 (매우 중요)
+- **학생의 생각·경험·내용·순서를 그대로 유지**하세요. 새로운 사건·감정·정보를 지어내지 마세요.
+- 맞춤법, 띄어쓰기, 문법 오류를 바로잡으세요.
+- 어색하거나 반복되는 표현을 자연스럽게 고치되, **초등학교 4학년이 쓸 법한 쉬운 말**을 유지하세요. 어른스러운 문장으로 바꾸지 마세요.
+- 글의 분량은 원본과 비슷하게 유지하세요. 크게 늘리거나 줄이지 마세요.
+- 학생의 말투와 개성은 살려 주세요. 완전히 다른 글로 바꾸는 게 아닙니다.
+
+## 지적된 맞춤법·문법 오류
+${grammarSection}
+
+## 지적된 반복 표현
+${repetitionSection}
+
+## 개선 제안 (학생용 피드백)
+${suggestion ? suggestion : "- (별도 제안 없음)"}
+
+## 학생이 쓴 원본 글
+"""
+${originalText}
+"""
+
+## 응답 형식
+반드시 아래 JSON만 출력하세요. 다른 텍스트나 마크다운 없이 JSON만 응답합니다.
+
+{
+  "correctedText": "다듬은 글 전체 (문단 구분은 \\n 사용)"
 }`;
 }
 

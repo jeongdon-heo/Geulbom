@@ -179,6 +179,21 @@ export default async function StudentFeedbackDetailPage({
               ` · 제출 ${new Date(submission.submittedAt).toLocaleDateString("ko-KR")}`}
           </p>
         </div>
+
+        {/* 고쳐 쓴 글 (선생님이 다듬어 준 글) */}
+        {fb.correctedText && (
+          <div className="mt-3 rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+            <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-teal-700">
+              고쳐 쓴 글
+            </p>
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
+              {fb.correctedText}
+            </p>
+            <p className="mt-2 text-xs text-teal-700/80">
+              선생님이 다듬어 준 글이에요. 내 글과 비교하며 읽어보면 좋아요.
+            </p>
+          </div>
+        )}
       </section>
     </main>
   );

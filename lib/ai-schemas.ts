@@ -85,6 +85,13 @@ export const analysisResponseSchema = z.object({
 export type AnalysisResponse = z.infer<typeof analysisResponseSchema>;
 
 
+// ── 글 다듬기(수정해 주기) 응답 ──
+export const correctionResponseSchema = z.object({
+  correctedText: z.string().min(1),
+});
+export type CorrectionResponse = z.infer<typeof correctionResponseSchema>;
+
+
 // ── 학년말 종합 보고서 응답 ──
 // 영역 키는 동적이므로 areaGrowth는 record로 받습니다.
 export const yearendReportResponseSchema = z.object({

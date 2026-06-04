@@ -263,6 +263,8 @@ export const updateFeedbackSchema = z.object({
     })
     .optional()
     .nullable(),
+  // AI가 다듬은 글 (교사가 수정 가능). null이면 미사용/삭제.
+  correctedText: z.string().max(12000).optional().nullable(),
   approve: z.boolean().optional(), // true면 APPROVED로 전환
 });
 export type UpdateFeedbackInput = z.infer<typeof updateFeedbackSchema>;

@@ -75,6 +75,8 @@ export async function PATCH(
   if (parsed.data.teacherEditedStudent !== undefined)
     data.teacherEditedStudent =
       (parsed.data.teacherEditedStudent as Prisma.InputJsonValue | null) ?? Prisma.JsonNull;
+  if (parsed.data.correctedText !== undefined)
+    data.correctedText = parsed.data.correctedText?.trim() || null;
   if (parsed.data.approve === true) {
     data.approvalStatus = "APPROVED";
     data.approvedAt = new Date();

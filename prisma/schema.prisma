@@ -332,6 +332,7 @@ model Feedback {
   approvalStatus  ApprovalStatus @default(PENDING) @map("approval_status")
   teacherComment  String?        @map("teacher_comment") @db.Text // 교사가 추가한 코멘트
   teacherEditedStudent Json?     @map("teacher_edited_student") @db.JsonB // 교사가 수정한 학생용 피드백 (null이면 원본 사용)
+  correctedText   String?        @map("corrected_text") @db.Text // AI가 피드백에 근거해 다듬은 글 (교사 생성·수정, 승인 시 학생에게 공개. null이면 미생성)
   approvedAt      DateTime?      @map("approved_at")
 
   createdAt DateTime @default(now()) @map("created_at")

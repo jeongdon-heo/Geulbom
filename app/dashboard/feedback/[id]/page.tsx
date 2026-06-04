@@ -107,6 +107,7 @@ export default async function FeedbackDetailPage({
                 teachingDirection: string;
               },
               teacherComment: submission.feedback.teacherComment,
+              correctedText: submission.feedback.correctedText,
               approvalStatus: submission.feedback.approvalStatus,
               approvedAt: submission.feedback.approvedAt?.toISOString() ?? null,
               aiProvider: submission.feedback.aiProvider,

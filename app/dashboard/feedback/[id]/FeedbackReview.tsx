@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { CheckCircle2, Sparkles, RefreshCw, Pencil, Save, X } from "lucide-react";
+import { CheckCircle2, Sparkles, RefreshCw, Pencil, Save, X, Wand2 } from "lucide-react";
 import { buildAIHeaders, getPreferredProvider } from "@/lib/api-keys";
 import type { AIProvider } from "@/lib/ai";
 
@@ -65,6 +65,7 @@ interface Feedback {
   teacherEditedStudent: StudentFeedback | null;
   feedbackTeacher: TeacherFeedback;
   teacherComment: string | null;
+  correctedText: string | null;
   approvalStatus: string;
   approvedAt: string | null;
   aiProvider: string;
@@ -105,6 +106,10 @@ export function FeedbackReview({
   // 교사 코멘트
   const [teacherComment, setTeacherComment] = useState(feedback?.teacherComment ?? "");
 
+  // AI 다듬기(수정해 주기) 결과 — 교사가 편집 가능
+  const [correctedText, setCorrectedText] = useState(feedback?.correctedText ?? "");
+  const [correcting, setCorrecting] = useState(false);
+
   // AI 분석 트리거
   async function runAnalysis() {
     setBusy(true);
@@ -130,6 +135,32 @@ export function FeedbackReview({
     }
   }
 
+  // "수정해 주기(AI)" — 피드백에 근거해 학생 글을 다듬어 받기
+  async function runCorrection() {
+    if (!feedback) return;
+    setCorrecting(true);
+    setError(null);
+    try {
+      const provider: AIProvider = getPreferredProvider();
+      const res = await fetch("/api/analyze/correct", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...buildAIHeaders(provider),
+        },
+        body: JSON.stringify({ feedbackId: feedback.id, provider }),
+      });
+      const body: ApiResp<{ correctedText: string }> = await res.json();
+      if (!body.success || !body.data) {
+        setError(body.error || "AI 다듬기 실패");
+        return;
+      }
+      setCorrectedText(body.data.correctedText);
+    } finally {
+      setCorrecting(false);
+    }
+  }
+
   async function saveEdit() {
     setBusy(true);
     setError(null);
@@ -140,6 +171,7 @@ export function FeedbackReview({
         body: JSON.stringify({
           teacherEditedStudent: editedStudent,
           teacherComment: teacherComment.trim() || null,
+          correctedText: correctedText.trim() || null,
         }),
       });
       const body: ApiResp<unknown> = await res.json();
@@ -165,6 +197,7 @@ export function FeedbackReview({
         body: JSON.stringify({
           teacherEditedStudent: editedStudent,
           teacherComment: teacherComment.trim() || null,
+          correctedText: correctedText.trim() || null,
           approve: true,
         }),
       });
@@ -219,7 +252,7 @@ export function FeedbackReview({
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        {/* 좌: 원문 */}
+        {/* 좌: 원문 + AI 다듬기 */}
         <section className="card">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-gray-500">
             학생이 쓴 글
@@ -227,6 +260,50 @@ export function FeedbackReview({
           <p className="whitespace-pre-wrap text-sm leading-relaxed text-gray-800">
             {submission.text}
           </p>
+
+          {/* 수정해 주기(AI): 피드백이 있어야 다듬기 가능 */}
+          {feedback && (
+            <div className="mt-4 border-t border-gray-100 pt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-gray-700">
+                  AI가 다듬은 글
+                </h3>
+                <button
+                  onClick={runCorrection}
+                  disabled={correcting || busy}
+                  className="inline-flex items-center gap-1 rounded-lg border border-area-expression/30 bg-area-expression/5 px-3 py-1.5 text-xs font-medium text-area-expression hover:bg-area-expression/10 disabled:opacity-50"
+                  title="피드백에 근거해 AI가 글을 다듬어 줍니다"
+                >
+                  <Wand2 className="h-3.5 w-3.5" />
+                  {correcting
+                    ? "다듬는 중..."
+                    : correctedText
+                      ? "다시 수정해 주기(AI)"
+                      : "수정해 주기(AI)"}
+                </button>
+              </div>
+
+              {correctedText ? (
+                <>
+                  <textarea
+                    value={correctedText}
+                    onChange={(e) => setCorrectedText(e.target.value)}
+                    className="input min-h-[160px] text-sm leading-relaxed"
+                  />
+                  <p className="mt-1.5 text-xs text-gray-500">
+                    맞춤법·문법 오류와 제안을 반영한 글이에요. 자유롭게 고친 뒤
+                    <span className="font-medium text-gray-700"> 저장</span>하면, 승인 후
+                    학생 피드백의 &lsquo;고쳐 쓴 글&rsquo;로 보여집니다.
+                  </p>
+                </>
+              ) : (
+                <p className="rounded-lg bg-bg-subtle px-3 py-2 text-xs text-gray-600">
+                  버튼을 누르면 AI가 맞춤법·문법 오류와 제안을 반영해 글을 다듬어
+                  줍니다. 원본은 그대로 두고, 다듬은 글만 따로 저장돼요.
+                </p>
+              )}
+            </div>
+          )}
         </section>
 
         {/* 우: 분석 결과 */}
