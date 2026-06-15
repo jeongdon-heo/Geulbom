@@ -74,7 +74,8 @@ export function WriteEditor({
   const [ocrBusy, setOcrBusy] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const charCount = [...text].length;
+  // 글자 수는 공백(스페이스·줄바꿈 등)을 제외하고 센다
+  const charCount = [...text.replace(/\s/g, "")].length;
   const meetsMin = !assignment.minChars || charCount >= assignment.minChars;
 
   // 자동 임시저장

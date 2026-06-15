@@ -63,7 +63,8 @@ export async function POST(req: NextRequest) {
   if (!round.isOpen) return fail("이 회차는 닫혀 있어요.", 410);
 
   // 제출 시 최소 글자 수 체크
-  const charCount = [...text].length; // 코드 포인트 기준
+  // 글자 수는 공백(스페이스·줄바꿈 등)을 제외하고 센다 (클라이언트 표시와 일치)
+  const charCount = [...text.replace(/\s/g, "")].length; // 코드 포인트 기준
   if (action === "SUBMIT") {
     if (answers && answers.length > 0) {
       // 학기말 글쓰기: 최소 한 개 질문에는 답해야 제출 가능

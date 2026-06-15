@@ -58,6 +58,7 @@ export function AssignmentForm({
   const [description, setDescription] = useState("");
   const [writingType, setWritingType] = useState("일기");
   const [writingTypeOther, setWritingTypeOther] = useState("");
+  const [useMinChars, setUseMinChars] = useState(false);
   const [minChars, setMinChars] = useState<string>("200");
   const [recommendedChars, setRecommendedChars] = useState<string>("400");
   const [aiPromptNote, setAiPromptNote] = useState("");
@@ -148,7 +149,8 @@ export function AssignmentForm({
         }
         payload.rubricTemplateId = rubricTemplateId;
         payload.writingType = finalWritingType;
-        payload.minChars = minChars ? Number(minChars) : null;
+        // 체크박스가 켜져 있을 때만 최소 글자 수 적용
+        payload.minChars = useMinChars && minChars ? Number(minChars) : null;
         payload.recommendedChars = recommendedChars ? Number(recommendedChars) : null;
         payload.autoApprove = autoApprove;
         payload.showScoreToStudent = showScoreToStudent;
@@ -380,15 +382,30 @@ export function AssignmentForm({
                 />
               )}
             </Field>
-            <Field label="최소 글자 수 (선택)">
+            <div>
+              <label className="label flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={useMinChars}
+                  onChange={(e) => setUseMinChars(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300 text-teal focus:ring-teal"
+                />
+                최소 글자 수 제한
+              </label>
               <input
                 type="number"
                 min={0}
                 value={minChars}
                 onChange={(e) => setMinChars(e.target.value)}
-                className="input"
+                disabled={!useMinChars}
+                className="input disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-400"
               />
-            </Field>
+              {!useMinChars && (
+                <p className="mt-1 text-xs text-gray-400">
+                  체크하면 학생이 이 글자 수 이상 써야 제출할 수 있어요.
+                </p>
+              )}
+            </div>
             <Field label="권장 글자 수 (선택)">
               <input
                 type="number"
