@@ -8,7 +8,7 @@
 - **Supabase** (PostgreSQL) + **Prisma ORM**
 - **Supabase Storage** (OCR 이미지)
 - **NextAuth.js** (교사) + 커스텀 인증 (학생)
-- **Google Gemini 2.0 Flash** / **Claude Sonnet** (교사가 선택)
+- **Google Gemini 2.5 Flash** / **Claude Sonnet 4.6** (교사가 선택)
 - **Recharts** (성장 차트), **PWA** (서비스워커 · 오프라인 폴백 · 설치)
 
 ## 주요 기능

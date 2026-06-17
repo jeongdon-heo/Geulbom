@@ -55,7 +55,7 @@ export function AISettings() {
                   : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
               }`}
             >
-              {p === "gemini" ? "Gemini 2.0 Flash" : "Claude Sonnet"}
+              {p === "gemini" ? "Gemini 2.5 Flash" : "Claude Sonnet 4.6"}
             </button>
           ))}
         </div>

@@ -8,7 +8,7 @@
 - Supabase (PostgreSQL) + Prisma ORM
 - Supabase Storage (OCR 이미지)
 - NextAuth.js (교사) + 커스텀 학급코드 인증 (학생)
-- Google Gemini 2.0 Flash / Claude Sonnet (교사가 선택)
+- Google Gemini 2.5 Flash / Claude Sonnet 4.6 (교사가 선택)
 - Recharts (차트)
 
 ## 전체 명세

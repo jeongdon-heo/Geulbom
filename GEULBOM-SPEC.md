@@ -27,7 +27,7 @@
 | 스타일링 | **Tailwind CSS** |
 | DB | **Supabase** (PostgreSQL) + **Prisma** ORM |
 | 파일 저장 | **Supabase Storage** (OCR 이미지) |
-| AI | **Gemini 2.0 Flash** / **Claude Sonnet** (교사가 선택) |
+| AI | **Gemini 2.5 Flash** / **Claude Sonnet 4.6** (교사가 선택) |
 | 인증 | **NextAuth.js** (교사) + 커스텀 학급코드 인증 (학생) |
 | 차트 | **Recharts** |
 | 배포 | **Vercel** |
