@@ -12,6 +12,11 @@ export type AIProvider = "gemini" | "claude";
 const GEMINI_MODEL = "gemini-2.5-flash";
 const CLAUDE_MODEL = "claude-sonnet-4-6";
 
+// 출력 토큰 한도.
+// 한국어는 토큰 효율이 낮아(음절당 1~2토큰) 분석/보고서 JSON이 길어지면
+// 응답이 중간에 잘려 JSON 파싱이 깨집니다. 넉넉하게 잡습니다.
+const MAX_OUTPUT_TOKENS = 16384;
+
 export interface AIClient {
   provider: AIProvider;
   /** 텍스트 프롬프트로 JSON을 반환받습니다. */
@@ -43,6 +48,20 @@ function parseJsonLoose(text: string): unknown {
   }
 }
 
+// 응답이 토큰 한도에 걸려 잘렸을 때 던지는 공통 에러.
+const TRUNCATED_MESSAGE =
+  "AI 응답이 너무 길어 중간에 잘렸습니다. 글이 너무 길거나 분석 항목이 많을 수 있어요. 다시 시도해 주세요.";
+
+function assertGeminiComplete(result: {
+  response: { candidates?: Array<{ finishReason?: string }> };
+}): void {
+  const reason = result.response.candidates?.[0]?.finishReason;
+  if (reason && reason !== "STOP") {
+    if (reason === "MAX_TOKENS") throw new Error(TRUNCATED_MESSAGE);
+    throw new Error(`AI가 응답을 완료하지 못했습니다. (사유: ${reason})`);
+  }
+}
+
 // ────────────────────────────────────────
 // Gemini 구현
 // ────────────────────────────────────────
@@ -58,9 +77,13 @@ class GeminiClient implements AIClient {
   async generateJSON(prompt: string): Promise<unknown> {
     const model = this.client.getGenerativeModel({
       model: GEMINI_MODEL,
-      generationConfig: { responseMimeType: "application/json" },
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+      },
     });
     const result = await model.generateContent(prompt);
+    assertGeminiComplete(result);
     const text = result.response.text();
     return parseJsonLoose(text);
   }
@@ -72,12 +95,16 @@ class GeminiClient implements AIClient {
   ): Promise<unknown> {
     const model = this.client.getGenerativeModel({
       model: GEMINI_MODEL,
-      generationConfig: { responseMimeType: "application/json" },
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: MAX_OUTPUT_TOKENS,
+      },
     });
     const result = await model.generateContent([
       { inlineData: { data: imageBase64, mimeType } },
       { text: prompt },
     ]);
+    assertGeminiComplete(result);
     const text = result.response.text();
     return parseJsonLoose(text);
   }
@@ -98,9 +125,10 @@ class ClaudeClient implements AIClient {
   async generateJSON(prompt: string): Promise<unknown> {
     const msg = await this.client.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: MAX_OUTPUT_TOKENS,
       messages: [{ role: "user", content: prompt }],
     });
+    if (msg.stop_reason === "max_tokens") throw new Error(TRUNCATED_MESSAGE);
     const text = msg.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
@@ -115,7 +143,7 @@ class ClaudeClient implements AIClient {
   ): Promise<unknown> {
     const msg = await this.client.messages.create({
       model: CLAUDE_MODEL,
-      max_tokens: 4096,
+      max_tokens: MAX_OUTPUT_TOKENS,
       messages: [
         {
           role: "user",
@@ -137,6 +165,7 @@ class ClaudeClient implements AIClient {
         },
       ],
     });
+    if (msg.stop_reason === "max_tokens") throw new Error(TRUNCATED_MESSAGE);
     const text = msg.content
       .filter((b): b is Anthropic.TextBlock => b.type === "text")
       .map((b) => b.text)
