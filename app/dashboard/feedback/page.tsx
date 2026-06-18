@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { CheckCircle2, Clock, Sparkles } from "lucide-react";
+import BatchAnalyzeButton from "./BatchAnalyzeButton";
 
 export const dynamic = "force-dynamic";
 
@@ -69,20 +70,26 @@ export default async function FeedbackListPage({
     return true;
   });
 
+  // AI 분석 대기(피드백 없음) 제출 ID — 일괄 분석 버튼에 전달
+  const needsAnalysisIds = rows.filter((r) => !r.feedback).map((r) => r.id);
+
   const counts = {
     all: rows.length,
-    needs_analysis: rows.filter((r) => !r.feedback).length,
+    needs_analysis: needsAnalysisIds.length,
     pending: rows.filter((r) => r.feedback?.approvalStatus === "PENDING").length,
     approved: rows.filter((r) => r.feedback?.approvalStatus === "APPROVED").length,
   };
 
   return (
     <>
-      <div className="mb-5">
-        <h1 className="text-2xl font-bold text-gray-900">피드백 검토</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          학생 제출물의 AI 분석 결과를 검토하고 승인합니다.
-        </p>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">피드백 검토</h1>
+          <p className="mt-1 text-sm text-gray-500">
+            학생 제출물의 AI 분석 결과를 검토하고 승인합니다.
+          </p>
+        </div>
+        <BatchAnalyzeButton submissionIds={needsAnalysisIds} />
       </div>
 
       {/* 필터 탭 */}
